@@ -50,15 +50,15 @@ int main ( int argc, char ** argv )
 
     Eigen::Affine3d left_arm_initial_pose;
     model->getPose ( left_arm_link, base_link, left_arm_initial_pose );
-    
+
     string right_arm_link = ( *robot ) ( "right_arm" ).getTipLinkName();
     auto right_arm_task = boost::make_shared<OpenSoT::tasks::velocity::Cartesian>
-                         ( base_link + "_TO_" + right_arm_link,
-                           qh,
-                           *model,
-                           right_arm_link,
-                           base_link
-                         );
+                          ( base_link + "_TO_" + right_arm_link,
+                            qh,
+                            *model,
+                            right_arm_link,
+                            base_link
+                          );
     right_arm_task->setLambda ( 1 );
     right_arm_task->setOrientationErrorGain ( 1 );
 
@@ -76,14 +76,26 @@ int main ( int argc, char ** argv )
     std::list<LinkPairDistance::LinksPair> whiteList;
     whiteList.emplace_back ( "arm1_7", "arm2_7" );
     self_collsion_constraint->setCollisionWhiteList ( whiteList );
-    
+
     std::vector<std::string> interested_links = {"arm1_1", "arm1_2", "arm1_3", "arm1_4", "arm1_5", "arm1_6", "arm1_7", "arm1_8"};
-    std::map<std::string, Eigen::Affine3d> environment_collision_frames;
+//     std::map<std::string, Eigen::Affine3d> environment_collision_frames;
     Eigen::Affine3d collision_pose;
     collision_pose.translation() << 0.75, 0, 0.5; // in world frame
     collision_pose.linear() = Eigen::Matrix3d::Identity();
-    environment_collision_frames["env"] = collision_pose;
-    auto environment_collsion_constraint = boost::make_shared<OpenSoT::constraints::velocity::CollisionAvoidance> ( qh, *model, base_link, interested_links, environment_collision_frames, 1, 0.05, 1 );
+//     environment_collision_frames["env"] = collision_pose;
+    std::map<std::string, boost::shared_ptr<fcl::CollisionObjectd>> envionment_collision_objects;
+    std::shared_ptr<fcl::CollisionGeometryd> shape = std::make_shared<fcl::Boxd> ( 0.1, 0.6, 1.4 );
+    boost::shared_ptr<fcl::CollisionObjectd> collision_object ( new fcl::CollisionObjectd ( shape ) );
+    fcl::Transform3d shape_origin;
+    shape_origin.translation() << 0.75, 0, 0.5; // in world frame
+    shape_origin.linear() = Eigen::Matrix3d::Identity();
+    collision_object->setTransform ( shape_origin );
+    envionment_collision_objects["env"] = collision_object;
+//     fcl::Transform3d shape_origin;
+//     shape_origin.translation() << 0.75, 0, 0.5; // in world frame
+//     shape_origin.linear() = Eigen::Matrix3d::Identity();
+//     envionment_collision_objects["env"]->setTransform ( shape_origin );
+    auto environment_collsion_constraint = boost::make_shared<OpenSoT::constraints::velocity::CollisionAvoidance> ( qh, *model, base_link, interested_links, envionment_collision_objects, 1, 0.05, 1 );
 
     auto autostack_ = boost::make_shared<OpenSoT::AutoStack> ( left_arm_task + right_arm_task + 0.1*velocity_task ); // + 0.2*postural_task%indices
     autostack_ << joint_limit_constraint;
@@ -111,7 +123,7 @@ int main ( int argc, char ** argv )
     cube.scale.x = 0.1;
     cube.scale.y = 0.6;
     cube.scale.z = 1.4;
-    tf::poseEigenToMsg(collision_pose, cube.pose);
+    tf::poseEigenToMsg ( collision_pose, cube.pose );
 
     cube.color.g = 1.0;
     cube.color.a = 0.5;
@@ -139,15 +151,15 @@ int main ( int argc, char ** argv )
             desired_pose.linear() = left_arm_initial_pose.linear();
             desired_pose.translation() = left_arm_initial_pose.translation() + Eigen::Vector3d ( 1,0,0 ) *0.3*length* ( 1-std::cos ( 2*3.1415/period*t ) );
             left_arm_task->setReference ( desired_pose.matrix() );
-	    
+
             desired_pose.linear() = right_arm_initial_pose.linear();
             desired_pose.translation() = right_arm_initial_pose.translation() + Eigen::Vector3d ( 1,0,0 ) *0.3*length* ( 1-std::cos ( 2*3.1415/period*t ) );
             right_arm_task->setReference ( desired_pose.matrix() );
-	    
-	    std::map<std::string, KDL::Frame> kdl_frames;
-	    tf::transformEigenToKDL(collision_pose, kdl_frames["env"]);
+
+            std::map<std::string, KDL::Frame> kdl_frames;
+            tf::transformEigenToKDL ( collision_pose, kdl_frames["env"] );
             environment_collsion_constraint->updateEnvironmentCollisionObjects ( kdl_frames );
-	    
+
             autostack_->update ( q );
             solver->solve ( dq );
             q += dq;

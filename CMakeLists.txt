@@ -51,6 +51,10 @@ find_package(RBDL REQUIRED)
 
 find_package(OpenSoT REQUIRED)
 
+FIND_PACKAGE(fcl QUIET)
+
+FIND_PACKAGE(moveit_core QUIET)
+
 find_package(catkin REQUIRED COMPONENTS actionlib_msgs robot_state_publisher tf_conversions roscpp roslib std_msgs sensor_msgs std_srvs geometry_msgs message_generation eigen_conversions)
 
 # XENOMAI
@@ -83,7 +87,10 @@ target_link_libraries(test_collision_avoidance
 		      yaml-cpp
 		      ${RBDL_LIBRARY}
 		      ${RBDL_URDFReader_LIBRARY}
-		      ${OpenSoT_LIBRARIES})
+		      ${OpenSoT_LIBRARIES}
+                      ${fcl_LIBRARIES}
+                      ${moveit_core_LIBRARIES}
+                      )
 		      
 # install
 install(TARGETS test_collision_avoidance
