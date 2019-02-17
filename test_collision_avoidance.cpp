@@ -78,11 +78,6 @@ int main ( int argc, char ** argv )
     self_collsion_constraint->setCollisionWhiteList ( whiteList );
 
     std::vector<std::string> interested_links = {"arm1_1", "arm1_2", "arm1_3", "arm1_4", "arm1_5", "arm1_6", "arm1_7", "arm1_8"};
-//     std::map<std::string, Eigen::Affine3d> environment_collision_frames;
-    Eigen::Affine3d collision_pose;
-    collision_pose.translation() << 0.75, 0, 0.5; // in world frame
-    collision_pose.linear() = Eigen::Matrix3d::Identity();
-//     environment_collision_frames["env"] = collision_pose;
     std::map<std::string, boost::shared_ptr<fcl::CollisionObjectd>> envionment_collision_objects;
     std::shared_ptr<fcl::CollisionGeometryd> shape = std::make_shared<fcl::Boxd> ( 0.1, 0.6, 1.4 );
     boost::shared_ptr<fcl::CollisionObjectd> collision_object ( new fcl::CollisionObjectd ( shape ) );
@@ -91,10 +86,6 @@ int main ( int argc, char ** argv )
     shape_origin.linear() = Eigen::Matrix3d::Identity();
     collision_object->setTransform ( shape_origin );
     envionment_collision_objects["env"] = collision_object;
-//     fcl::Transform3d shape_origin;
-//     shape_origin.translation() << 0.75, 0, 0.5; // in world frame
-//     shape_origin.linear() = Eigen::Matrix3d::Identity();
-//     envionment_collision_objects["env"]->setTransform ( shape_origin );
     auto environment_collsion_constraint = boost::make_shared<OpenSoT::constraints::velocity::CollisionAvoidance> ( qh, *model, base_link, interested_links, envionment_collision_objects, 1, 0.05, 1 );
 
     auto autostack_ = boost::make_shared<OpenSoT::AutoStack> ( left_arm_task + right_arm_task + 0.1*velocity_task ); // + 0.2*postural_task%indices
@@ -123,6 +114,9 @@ int main ( int argc, char ** argv )
     cube.scale.x = 0.1;
     cube.scale.y = 0.6;
     cube.scale.z = 1.4;
+    Eigen::Affine3d collision_pose;
+    collision_pose.translation() = shape_origin.translation(); // in world frame
+    collision_pose.linear() = shape_origin.linear();
     tf::poseEigenToMsg ( collision_pose, cube.pose );
 
     cube.color.g = 1.0;
